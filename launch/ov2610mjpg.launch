@@ -1,0 +1,10 @@
+<launch> 
+  <node name="camera_node" pkg="usb_cam" type="usb_cam_node">
+    <param name="video_device" value="/dev/video2" />
+    <param name="image_width" value="800" />
+    <param name="image_height" value="600" />
+    <param name="pixel_format" value="mjpeg" /> 
+    <param name="camera_frame_id" value="ov2610" /> 
+    <param name="io_method" value="mmap"/>
+  </node>
+</launch>
