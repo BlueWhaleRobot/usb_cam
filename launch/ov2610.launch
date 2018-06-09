@@ -4,6 +4,8 @@
     <param name="image_width" value="640" />
     <param name="image_height" value="480" />
     <param name="pixel_format" value="yuyv" /> 
+    <param name="framerate" value="30" />
+    <param name="time_delay" value="50" />
     <param name="camera_frame_id" value="ov2610" />
     <param name="io_method" value="mmap"/>
   </node>

@@ -58,6 +58,38 @@
 
 namespace usb_cam {
 
+void monotonicToRealTime(const timespec& monotonic_time, timespec& real_time,int time_delay)
+{
+  struct timespec real_sample1, real_sample2, monotonic_sample;
+
+  // TODO(lucasw) Disable interrupts here?
+  // otherwise what if there is a delay/interruption between sampling the times?
+  clock_gettime(CLOCK_REALTIME, &real_sample1);
+  clock_gettime(CLOCK_MONOTONIC, &monotonic_sample);
+  clock_gettime(CLOCK_REALTIME, &real_sample2);
+
+  timespec time_diff;
+  time_diff.tv_sec = real_sample2.tv_sec - monotonic_sample.tv_sec;
+  time_diff.tv_nsec = real_sample2.tv_nsec - monotonic_sample.tv_nsec;
+
+  // This isn't available outside of the kernel
+  // real_time = timespec_add(monotonic_time, time_diff);
+
+  const long NSEC_PER_SEC = 1000000000;
+  real_time.tv_sec = monotonic_time.tv_sec + time_diff.tv_sec;
+  real_time.tv_nsec = monotonic_time.tv_nsec + time_diff.tv_nsec - time_delay*1000000;
+  if (real_time.tv_nsec >= NSEC_PER_SEC)
+  {
+    ++real_time.tv_sec;
+    real_time.tv_nsec -= NSEC_PER_SEC;
+  }
+  else if (real_time.tv_nsec < 0)
+  {
+    --real_time.tv_sec;
+    real_time.tv_nsec += NSEC_PER_SEC;
+  }
+}
+
 static void errno_exit(const char * s)
 {
   ROS_ERROR("%s error %d, %s", s, errno, strerror(errno));
@@ -375,22 +407,27 @@ int UsbCam::init_mjpeg_decoder(int image_width, int image_height)
   }
 
   avcodec_context_ = avcodec_alloc_context3(avcodec_);
+#if LIBAVCODEC_VERSION_MAJOR < 55
   avframe_camera_ = avcodec_alloc_frame();
   avframe_rgb_ = avcodec_alloc_frame();
+#else
+  avframe_camera_ = av_frame_alloc();
+  avframe_rgb_ = av_frame_alloc();
+#endif
 
-  avpicture_alloc((AVPicture *)avframe_rgb_, PIX_FMT_RGB24, image_width, image_height);
+  avpicture_alloc((AVPicture *)avframe_rgb_, AV_PIX_FMT_RGB24, image_width, image_height);
 
   avcodec_context_->codec_id = AV_CODEC_ID_MJPEG;
   avcodec_context_->width = image_width;
   avcodec_context_->height = image_height;
 
 #if LIBAVCODEC_VERSION_MAJOR > 52
-  avcodec_context_->pix_fmt = PIX_FMT_YUV422P;
+  avcodec_context_->pix_fmt = AV_PIX_FMT_YUV422P;
   avcodec_context_->codec_type = AVMEDIA_TYPE_VIDEO;
 #endif
 
-  avframe_camera_size_ = avpicture_get_size(PIX_FMT_YUV422P, image_width, image_height);
-  avframe_rgb_size_ = avpicture_get_size(PIX_FMT_RGB24, image_width, image_height);
+  avframe_camera_size_ = avpicture_get_size(AV_PIX_FMT_YUV422P, image_width, image_height);
+  avframe_rgb_size_ = avpicture_get_size(AV_PIX_FMT_RGB24, image_width, image_height);
 
   /* open it */
   if (avcodec_open2(avcodec_context_, avcodec_, &avoptions_) < 0)
@@ -440,13 +477,13 @@ void UsbCam::mjpeg2rgb(char *MJPEG, int len, char *RGB, int NumPixels)
     return;
   }
 
-  video_sws_ = sws_getContext(xsize, ysize, avcodec_context_->pix_fmt, xsize, ysize, PIX_FMT_RGB24, SWS_BILINEAR, NULL,
+  video_sws_ = sws_getContext(xsize, ysize, avcodec_context_->pix_fmt, xsize, ysize, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL,
 			      NULL,  NULL);
   sws_scale(video_sws_, avframe_camera_->data, avframe_camera_->linesize, 0, ysize, avframe_rgb_->data,
             avframe_rgb_->linesize);
   sws_freeContext(video_sws_);
 
-  int size = avpicture_layout((AVPicture *)avframe_rgb_, PIX_FMT_RGB24, xsize, ysize, (uint8_t *)RGB, avframe_rgb_size_);
+  int size = avpicture_layout((AVPicture *)avframe_rgb_, AV_PIX_FMT_RGB24, xsize, ysize, (uint8_t *)RGB, avframe_rgb_size_);
   if (size != avframe_rgb_size_)
   {
     ROS_ERROR("webcam: avpicture_layout error: %d", size);
@@ -482,6 +519,9 @@ int UsbCam::read_frame()
   struct v4l2_buffer buf;
   unsigned int i;
   int len;
+  ros::Time stamp;
+  timespec buf_time;
+  timespec real_time;
 
   switch (io_)
   {
@@ -505,6 +545,7 @@ int UsbCam::read_frame()
       }
 
       process_image(buffers_[0].start, len, image_);
+      // TODO(lucasw) how to get timestamp with this method?
 
       break;
 
@@ -531,12 +572,19 @@ int UsbCam::read_frame()
         }
       }
 
+      // need to get buf time here otherwise process_image will zero it
+      TIMEVAL_TO_TIMESPEC(&buf.timestamp, &buf_time);
+      monotonicToRealTime(buf_time, real_time,time_delay_);
+      stamp = ros::Time(real_time.tv_sec, real_time.tv_nsec);
+
       assert(buf.index < n_buffers_);
       len = buf.bytesused;
       process_image(buffers_[buf.index].start, len, image_);
 
       if (-1 == xioctl(fd_, VIDIOC_QBUF, &buf))
         errno_exit("VIDIOC_QBUF");
+
+      image_->stamp = stamp;
 
       break;
 
@@ -563,6 +611,10 @@ int UsbCam::read_frame()
         }
       }
 
+      TIMEVAL_TO_TIMESPEC(&buf.timestamp, &buf_time);
+      monotonicToRealTime(buf_time, real_time,time_delay_);
+      stamp = ros::Time(real_time.tv_sec, real_time.tv_nsec);
+
       for (i = 0; i < n_buffers_; ++i)
         if (buf.m.userptr == (unsigned long)buffers_[i].start && buf.length == buffers_[i].length)
           break;
@@ -574,6 +626,7 @@ int UsbCam::read_frame()
       if (-1 == xioctl(fd_, VIDIOC_QBUF, &buf))
         errno_exit("VIDIOC_QBUF");
 
+      image_->stamp = stamp;
       break;
   }
 
@@ -999,10 +1052,10 @@ void UsbCam::open_device(void)
 
 void UsbCam::start(const std::string& dev, io_method io_method,
 		   pixel_format pixel_format, int image_width, int image_height,
-		   int framerate)
+		   int framerate,int time_delay)
 {
   camera_dev_ = dev;
-
+  time_delay_ = time_delay;
   io_ = io_method;
   monochrome_ = false;
   if (pixel_format == PIXEL_FORMAT_YUYV)
@@ -1079,7 +1132,7 @@ void UsbCam::grab_image(sensor_msgs::Image* msg)
   // grab the image
   grab_image();
   // stamp the image
-  msg->header.stamp = ros::Time::now();
+  msg->header.stamp = image_->stamp;
   // fill the info
   if (monochrome_)
   {
@@ -1107,6 +1160,9 @@ void UsbCam::grab_image()
   tv.tv_usec = 0;
 
   r = select(fd_ + 1, &fds, NULL, NULL, &tv);
+  // if the v4l2_buffer timestamp isn't available use this time, though
+  // it may be 10s of milliseconds after the frame acquisition.
+  image_->stamp = ros::Time::now();
 
   if (-1 == r)
   {

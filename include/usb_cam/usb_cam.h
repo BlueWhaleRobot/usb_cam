@@ -76,7 +76,7 @@ class UsbCam {
 
   // start camera
   void start(const std::string& dev, io_method io, pixel_format pf,
-		    int image_width, int image_height, int framerate);
+		    int image_width, int image_height, int framerate,int time_delay);
   // shutdown camera
   void shutdown(void);
 
@@ -104,6 +104,7 @@ class UsbCam {
     int height;
     int bytes_per_pixel;
     int image_size;
+    ros::Time stamp;
     char *image;
     int is_new;
   } camera_image_t;
@@ -146,10 +147,9 @@ class UsbCam {
   int avframe_rgb_size_;
   struct SwsContext *video_sws_;
   camera_image_t *image_;
-
+  int time_delay_;
 };
 
 }
 
 #endif
-
