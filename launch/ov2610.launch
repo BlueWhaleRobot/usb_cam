@@ -6,7 +6,7 @@
     <param name="pixel_format" value="yuyv" />
     <param name="framerate" value="30" />
     <param name="time_delay" value="30" />
-    <param name="camera_frame_id" value="ov2610" />
+    <param name="camera_frame_id" value="head_camera" />
     <param name="io_method" value="mmap"/>
     <param name="camera_info_url" value="file://$(find usb_cam)/launch/ov2610.yaml"/>
   </node>
