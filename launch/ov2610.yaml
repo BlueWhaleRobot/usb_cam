@@ -1,0 +1,20 @@
+image_width: 640
+image_height: 480
+camera_name: ov2610
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [395.6779619478691, 0, 325.0466266836216, 0, 397.4934332366201, 238.9974356449355, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.2805598785308578, 0.06685114307459132, -0.0009688764167839786, -0.0002636873513136712, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [276.2261962890625, 0, 339.8098918793403, 0, 0, 276.8030395507812, 238.0431770385439, 0, 0, 0, 1, 0]
