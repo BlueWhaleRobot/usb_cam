@@ -41,9 +41,11 @@
 extern "C"
 {
 #include <linux/videodev2.h>
-#include <libavcodec/avcodec.h>
-#include <libswscale/swscale.h>
-#include <libavutil/mem.h>
+#include "libavcodec/avcodec.h"
+#include "libswscale/swscale.h"
+#include "libavutil/mem.h"
+#include "libavutil/frame.h"
+#include "libavutil/log.h"
 }
 
 // legacy reasons
@@ -152,4 +154,3 @@ class UsbCam {
 }
 
 #endif
-

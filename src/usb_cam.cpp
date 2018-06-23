@@ -54,7 +54,12 @@
 
 #include <usb_cam/usb_cam.h>
 
+
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
+
+#define avcodec_alloc_frame av_frame_alloc
+#define PIX_FMT_RGB24 AV_PIX_FMT_RGB24
+#define PIX_FMT_YUV422P AV_PIX_FMT_YUV422P
 
 namespace usb_cam {
 
@@ -392,6 +397,7 @@ int UsbCam::init_mjpeg_decoder(int image_width, int image_height)
   avframe_camera_size_ = avpicture_get_size(PIX_FMT_YUV422P, image_width, image_height);
   avframe_rgb_size_ = avpicture_get_size(PIX_FMT_RGB24, image_width, image_height);
 
+  av_log_set_level(AV_LOG_ERROR);//disable deprecated warning
   /* open it */
   if (avcodec_open2(avcodec_context_, avcodec_, &avoptions_) < 0)
   {
@@ -439,6 +445,7 @@ void UsbCam::mjpeg2rgb(char *MJPEG, int len, char *RGB, int NumPixels)
     ROS_ERROR("outbuf size mismatch.  pic_size: %d bufsize: %d", pic_size, avframe_camera_size_);
     return;
   }
+
 
   video_sws_ = sws_getContext(xsize, ysize, avcodec_context_->pix_fmt, xsize, ysize, PIX_FMT_RGB24, SWS_BILINEAR, NULL,
 			      NULL,  NULL);
