@@ -39,6 +39,7 @@ pkg_check_modules(JSONCPP REQUIRED jsoncpp)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
+  CATKIN_DEPENDS xiaoqiang_log
 )
 
 ###########
@@ -62,7 +63,14 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 ## Declare a cpp executable
-add_executable(${PROJECT_NAME}_node nodes/usb_cam_node.cpp)
+add_executable(
+  ${PROJECT_NAME}_node nodes/usb_cam_node.cpp
+)
+add_dependencies(
+  ${PROJECT_NAME}_node
+  ${catkin_EXPORTED_TARGETS} xiaoqiang_log_generate_messages_cpp
+)
+
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${avcodec_LIBRARIES}
