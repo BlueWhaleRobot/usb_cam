@@ -68,7 +68,7 @@ add_executable(
 )
 add_dependencies(
   ${PROJECT_NAME}_node
-  ${catkin_EXPORTED_TARGETS} xiaoqiang_log_generate_messages_cpp
+  ${catkin_EXPORTED_TARGETS} xiaoqiang_log_cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_node
