@@ -21,6 +21,8 @@
   <build_depend>sensor_msgs</build_depend> 
   <build_depend>ffmpeg</build_depend>
   <build_depend>camera_info_manager</build_depend>
+  <build_depend>xiaoqiang_log</build_depend>
+  <build_depend>libjsoncpp</build_depend>
 
   <run_depend>image_transport</run_depend> 
   <run_depend>roscpp</run_depend> 
@@ -30,4 +32,6 @@
   <run_depend>ffmpeg</run_depend>
   <run_depend>camera_info_manager</run_depend>
   <run_depend>v4l-utils</run_depend>
+  <run_depend>xiaoqiang_log</run_depend>
+  <run_depend>libjsoncpp</run_depend>
 </package>

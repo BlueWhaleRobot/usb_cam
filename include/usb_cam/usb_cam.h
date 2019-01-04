@@ -36,7 +36,7 @@
 #ifndef USB_CAM_USB_CAM_H
 #define USB_CAM_USB_CAM_H
 
-#include <asm/types.h>          /* for videodev2.h */
+#include <asm/types.h> /* for videodev2.h */
 
 extern "C"
 {
@@ -56,50 +56,69 @@ extern "C"
 
 #include <string>
 #include <sstream>
+#include <json/json.h>
 
 #include <sensor_msgs/Image.h>
+#include "xiaoqiang_log/LogRecord.h"
+#include "std_msgs/String.h"
 
-namespace usb_cam {
+namespace usb_cam
+{
 
-class UsbCam {
- public:
+class UsbCam
+{
+public:
   typedef enum
   {
-    IO_METHOD_READ, IO_METHOD_MMAP, IO_METHOD_USERPTR, IO_METHOD_UNKNOWN,
+    IO_METHOD_READ,
+    IO_METHOD_MMAP,
+    IO_METHOD_USERPTR,
+    IO_METHOD_UNKNOWN,
   } io_method;
 
   typedef enum
   {
-    PIXEL_FORMAT_YUYV, PIXEL_FORMAT_UYVY, PIXEL_FORMAT_MJPEG, PIXEL_FORMAT_YUVMONO10, PIXEL_FORMAT_RGB24, PIXEL_FORMAT_GREY, PIXEL_FORMAT_UNKNOWN
+    PIXEL_FORMAT_YUYV,
+    PIXEL_FORMAT_UYVY,
+    PIXEL_FORMAT_MJPEG,
+    PIXEL_FORMAT_YUVMONO10,
+    PIXEL_FORMAT_RGB24,
+    PIXEL_FORMAT_GREY,
+    PIXEL_FORMAT_UNKNOWN
   } pixel_format;
 
   UsbCam();
   ~UsbCam();
 
   // start camera
-  void start(const std::string& dev, io_method io, pixel_format pf,
-		    int image_width, int image_height, int framerate,int time_delay);
+  void start(const std::string &dev, io_method io, pixel_format pf,
+             int image_width, int image_height, int framerate, int time_delay);
   // shutdown camera
   void shutdown(void);
 
   // grabs a new image from the camera
-  void grab_image(sensor_msgs::Image* image);
+  void grab_image(sensor_msgs::Image *image);
 
   // enables/disable auto focus
   void set_auto_focus(int value);
 
   // Set video device parameters
-  void set_v4l_parameter(const std::string& param, int value);
-  void set_v4l_parameter(const std::string& param, const std::string& value);
+  void set_v4l_parameter(const std::string &param, int value);
+  void set_v4l_parameter(const std::string &param, const std::string &value);
 
-  static io_method io_method_from_string(const std::string& str);
-  static pixel_format pixel_format_from_string(const std::string& str);
+  static io_method io_method_from_string(const std::string &str);
+  static pixel_format pixel_format_from_string(const std::string &str);
 
   void stop_capturing(void);
   void start_capturing(void);
   bool is_capturing();
+  void errno_exit(const char *s);
+  void pub_log(const char *s);
+  ros::NodeHandle nh;
+  ros::Publisher log_pub;
+  ros::Publisher audio_pub;
 
- private:
+private:
   typedef struct
   {
     int width;
@@ -113,14 +132,13 @@ class UsbCam {
 
   struct buffer
   {
-    void * start;
+    void *start;
     size_t length;
   };
 
-
   int init_mjpeg_decoder(int image_width, int image_height);
   void mjpeg2rgb(char *MJPEG, int len, char *RGB, int NumPixels);
-  void process_image(const void * src, int len, camera_image_t *dest);
+  void process_image(const void *src, int len, camera_image_t *dest);
   int read_frame();
   void uninit_device(void);
   void init_read(unsigned int buffer_size);
@@ -132,13 +150,12 @@ class UsbCam {
   void grab_image();
   bool is_capturing_;
 
-
   std::string camera_dev_;
   unsigned int pixelformat_;
   bool monochrome_;
   io_method io_;
   int fd_;
-  buffer * buffers_;
+  buffer *buffers_;
   unsigned int n_buffers_;
   AVFrame *avframe_camera_;
   AVFrame *avframe_rgb_;
@@ -152,6 +169,6 @@ class UsbCam {
   int time_delay_;
 };
 
-}
+} // namespace usb_cam
 
 #endif
