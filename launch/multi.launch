@@ -1,6 +1,6 @@
 <launch>
   <group ns="multi">
-    <node name="front" pkg="usb_cam" type="usb_cam_node">
+    <node name="front" pkg="usb_cam" type="usb_cam_node" respawn="true" respawn_delay="10">
       <param name="video_device" value="/dev/video001"/>
       <param name="image_width" value="640" />
       <param name="image_height" value="480" />
@@ -11,7 +11,7 @@
       <param name="time_delay" value="50" />
       <param name="camera_info_url" value="file://$(find usb_cam)/launch/front.yaml"/>
     </node>
-    <node name="back" pkg="usb_cam" type="usb_cam_node">
+    <node name="back" pkg="usb_cam" type="usb_cam_node" respawn="true" respawn_delay="10">
       <param name="video_device" value="/dev/video011"/>
       <param name="image_width" value="640" />
       <param name="image_height" value="480" />
