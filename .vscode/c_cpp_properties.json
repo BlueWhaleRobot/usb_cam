@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "/opt/ros/kinetic/include",
                 "/home/xiaoqiang/Documents/ros/devel/include",
-                "/usr/include/jsoncpp"
+                "/usr/include/jsoncpp",
+                "/opt/ros/kinetic/include/opencv-3.3.1-dev"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

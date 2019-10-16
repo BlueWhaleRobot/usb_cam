@@ -17,11 +17,14 @@ endif()
 find_package(catkin REQUIRED COMPONENTS
   image_transport
   roscpp std_msgs
+  cv_bridge
   std_srvs
   sensor_msgs
   camera_info_manager
   xiaoqiang_log
 )
+
+find_package(OpenCV 3.2.0 REQUIRED)
 
 ## pkg-config libraries
 find_package(PkgConfig REQUIRED)
@@ -51,6 +54,7 @@ include_directories(include
   ${avcodec_INCLUDE_DIRS}
   ${swscale_INCLUDE_DIRS}
   ${JSONCPP_INCLUDE_DIRS}
+  ${OpenCV_INCLIDE_DIRS}
 )
 
 ## Build the USB camera library
@@ -66,6 +70,11 @@ target_link_libraries(${PROJECT_NAME}
 add_executable(
   ${PROJECT_NAME}_node nodes/usb_cam_node.cpp
 )
+
+add_executable(
+  fake_node nodes/fake_node.cpp
+)
+
 add_dependencies(
   ${PROJECT_NAME}_node
   ${catkin_EXPORTED_TARGETS} xiaoqiang_log_cpp
@@ -76,6 +85,11 @@ target_link_libraries(${PROJECT_NAME}_node
   ${avcodec_LIBRARIES}
   ${swscale_LIBRARIES}
   ${catkin_LIBRARIES}
+)
+
+target_link_libraries(fake_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
 )
 
 #############

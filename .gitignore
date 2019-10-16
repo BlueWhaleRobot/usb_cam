@@ -2,3 +2,4 @@
 .project
 .settings
 launch/*.yaml
+.vscode
