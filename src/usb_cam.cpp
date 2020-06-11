@@ -431,7 +431,15 @@ UsbCam::~UsbCam()
 
 int UsbCam::init_mjpeg_decoder(int image_width, int image_height)
 {
-  avcodec_register_all();
+
+  /*
+	 * av_register_all() got deprecated in lavf 58.9.100
+	 * It is now useless
+	 * https://github.com/FFmpeg/FFmpeg/blob/70d25268c21cbee5f08304da95be1f647c630c15/doc/APIchanges#L86
+	 */
+	#if ( LIBAVCODEC_VERSION_INT  < AV_VERSION_INT(58,9,100) )
+	avcodec_register_all();
+	#endif
 
   avcodec_ = avcodec_find_decoder(AV_CODEC_ID_MJPEG);
   if (!avcodec_)
@@ -449,7 +457,13 @@ int UsbCam::init_mjpeg_decoder(int image_width, int image_height)
   avframe_rgb_ = av_frame_alloc();
 #endif
 
+#if ( LIBAVCODEC_VERSION_INT  < AV_VERSION_INT(58,9,100) )
   avpicture_alloc((AVPicture *)avframe_rgb_, AV_PIX_FMT_RGB24, image_width, image_height);
+#else
+  int ret = av_image_alloc(avframe_rgb_->data, avframe_rgb_->linesize,
+                              image_width, image_height, AV_PIX_FMT_RGB24, 1);
+#endif
+  
 
   avcodec_context_->codec_id = AV_CODEC_ID_MJPEG;
   avcodec_context_->width = image_width;
@@ -460,8 +474,13 @@ int UsbCam::init_mjpeg_decoder(int image_width, int image_height)
   avcodec_context_->codec_type = AVMEDIA_TYPE_VIDEO;
 #endif
 
+#if ( LIBAVCODEC_VERSION_INT  < AV_VERSION_INT(58,9,100) )
   avframe_camera_size_ = avpicture_get_size(AV_PIX_FMT_YUV422P, image_width, image_height);
   avframe_rgb_size_ = avpicture_get_size(AV_PIX_FMT_RGB24, image_width, image_height);
+#else
+  avframe_camera_size_ = av_image_get_buffer_size(AV_PIX_FMT_YUV422P, image_width, image_height, 1);
+  avframe_rgb_size_ = av_image_get_buffer_size(AV_PIX_FMT_RGB24, image_width, image_height, 1);
+#endif
 
   /* open it */
   if (avcodec_open2(avcodec_context_, avcodec_, &avoptions_) < 0)
@@ -485,7 +504,28 @@ void UsbCam::mjpeg2rgb(char *MJPEG, int len, char *RGB, int NumPixels)
 
   avpkt.size = len;
   avpkt.data = (unsigned char *)MJPEG;
+  #if ( LIBAVCODEC_VERSION_INT  < AV_VERSION_INT(58,9,100) )
   decoded_len = avcodec_decode_video2(avcodec_context_, avframe_camera_, &got_picture, &avpkt);
+  #else
+  //  SUGGESTION
+  //  Now that avcodec_decode_video2 is deprecated and replaced
+  //  by 2 calls (receive frame and send packet), this could be optimized
+  //  into separate routines or separate threads.
+  //  Also now that it always consumes a whole buffer some code
+  //  in the caller may be able to be optimized.
+  decoded_len = avcodec_receive_frame(avcodec_context_, avframe_camera_);
+  if (decoded_len == 0)
+      got_picture = 1;
+  if (decoded_len == AVERROR(EAGAIN))
+      decoded_len = 0;
+  if (decoded_len == 0)
+      decoded_len = avcodec_send_packet(avcodec_context_, &avpkt);
+  // The code assumes that there is always space to add a new
+  // packet. This seems risky but has always worked.
+  // It should actually check if (ret == AVERROR(EAGAIN)) and then keep
+  // the packet around and try it again after processing the frame
+  // received here.
+  #endif
 
   if (decoded_len < 0)
   {
@@ -504,7 +544,11 @@ void UsbCam::mjpeg2rgb(char *MJPEG, int len, char *RGB, int NumPixels)
 
   int xsize = avcodec_context_->width;
   int ysize = avcodec_context_->height;
+  #if ( LIBAVCODEC_VERSION_INT  < AV_VERSION_INT(58,9,100) )
   int pic_size = avpicture_get_size(avcodec_context_->pix_fmt, xsize, ysize);
+  #else
+  int pic_size = av_image_get_buffer_size(avcodec_context_->pix_fmt, xsize, ysize, 1);
+  #endif
   if (pic_size != avframe_camera_size_)
   {
     ROS_ERROR("outbuf size mismatch.  pic_size: %d bufsize: %d", pic_size, avframe_camera_size_);
@@ -517,7 +561,11 @@ void UsbCam::mjpeg2rgb(char *MJPEG, int len, char *RGB, int NumPixels)
             avframe_rgb_->linesize);
   sws_freeContext(video_sws_);
 
+  #if ( LIBAVCODEC_VERSION_INT  < AV_VERSION_INT(58,9,100) )
   int size = avpicture_layout((AVPicture *)avframe_rgb_, AV_PIX_FMT_RGB24, xsize, ysize, (uint8_t *)RGB, avframe_rgb_size_);
+  #else
+  int size = av_image_copy_to_buffer((uint8_t *)RGB, avframe_rgb_size_, avframe_rgb_->data, avframe_rgb_->linesize, AV_PIX_FMT_RGB24, xsize, ysize, 1);
+  #endif
   if (size != avframe_rgb_size_)
   {
     ROS_ERROR("webcam: avpicture_layout error: %d", size);

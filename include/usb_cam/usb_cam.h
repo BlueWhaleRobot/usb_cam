@@ -46,6 +46,7 @@ extern "C"
 #include "libavutil/mem.h"
 #include "libavutil/frame.h"
 #include "libavutil/log.h"
+#include "libavutil/imgutils.h"
 }
 
 // legacy reasons
