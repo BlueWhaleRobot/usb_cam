@@ -1,0 +1,26 @@
+<launch>
+  <group ns="multi">
+    <node name="front" pkg="usb_cam" type="usb_cam_node" respawn="true" respawn_delay="10">
+      <param name="video_device" value="/dev/video001"/>
+      <param name="image_width" value="640" />
+      <param name="image_height" value="480" />
+      <param name="pixel_format" value="yuyv" />
+      <param name="camera_frame_id" value="cam_front" />
+      <param name="io_method" value="mmap"/>
+      <param name="framerate" value="20" />
+      <param name="time_delay" value="50" />
+      <param name="camera_info_url" value="file://$(find usb_cam)/launch/front.yaml"/>
+    </node>
+    <node name="back" pkg="usb_cam" type="usb_cam_node" respawn="true" respawn_delay="10">
+      <param name="video_device" value="/dev/video011"/>
+      <param name="image_width" value="640" />
+      <param name="image_height" value="480" />
+      <param name="pixel_format" value="yuyv" />
+      <param name="camera_frame_id" value="cam_back" />
+      <param name="io_method" value="mmap"/>
+      <param name="framerate" value="20" />
+      <param name="time_delay" value="50" />
+      <param name="camera_info_url" value="file://$(find usb_cam)/launch/back.yaml"/>
+    </node>
+  </group>
+</launch>
